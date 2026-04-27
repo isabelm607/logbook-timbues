@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logbook Técnico - Central Timbúes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root { --primary: #1a3a5a; --secondary: #3498db; --accent: #27ae60; --danger: #e74c3c; --whatsapp: #25d366; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f4f7f6; color: #333; }
+        .header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: bold; letter-spacing: 1px; }
+        .container { max-width: 1100px; margin: 20px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; color: #555; }
+        select, input, textarea { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; transition: border 0.3s; }
+        select:focus, input:focus, textarea:focus { border-color: var(--secondary); outline: none; }
+        
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .btn { border: none; padding: 15px; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 14px; text-transform: uppercase; }
+        .btn-register { background: var(--primary); }
+        .btn-register:hover { background: #122a42; }
+        .btn-whatsapp { background: var(--whatsapp); }
+        .btn-whatsapp:hover { background: #1ebe57; }
+        
+        .panel-control { background: #eef2f3; padding: 15px; border-radius: 6px; margin-top: 30px; border-left: 5px solid var(--secondary); }
+        .btn-small { padding: 8px 15px; font-size: 12px; margin-right: 5px; margin-top: 10px;}
+        .btn-pdf { background: var(--danger); }
+        .btn-backup { background: #7f8c8d; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th { background: #2c3e50; color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .badge-zona { background: #3498db; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: bold; }
+        .timestamp { font-size: 0.7em; color: #999; display: block; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">SISTEMA DE NOVEDADES - GENERACIÓN MEDITERRÁNEA S.A.</div>
+
+<div class="container">
+    <div class="grid-inputs">
+        <div class="form-group">
+            <label>Fecha Novedad</label>
+            <input type="date" id="fechaNov">
+        </div>
+        <div class="form-group">
+            <label>Hora Novedad</label>
+            <input type="time" id="horaNov">
+        </div>
+        <div class="form-group">
+            <label>Turno</label>
+            <select id="turno">
+                <option>Mañana</option><option>Tarde</option><option>Noche</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Operador</label>
+            <select id="operador">
+                <option>Lucas Chiodin</option>
+                <option>Pablo Roman</option>
+                <option>Mauro Perez</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Zona / Equipo</label>
+            <select id="zona">
+                <option>TURBINA</option><option>CALDERA</option><option>DRY COOLER</option>
+                <option>BLU CHILL</option><option>SWASS</option><option>SKID DOSIFICACIÓN</option>
+                <option>SKID GAS OIL Y NOx</option><option>SKID ACEITE</option>
+                <option>PLANTA DE AGUA</option><option>LABORATORIO</option>
+                <option>PLANTA DE EFLUENTES</option><option>EVAP COOLER</option>
+                <option>CALENTADOR DE GAS</option><option>CENTRIFUGAS AL</option><option>OTROS</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 15px;">
+        <label>Descripción de la Novedad</label>
+        <textarea id="novedad" rows="3" placeholder="Detalle el hallazgo técnico..."></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom: 15px;">
+        <label>Acción Tomada</label>
+        <textarea id="accion" rows="2" placeholder="¿Qué medidas o avisos se generaron?"></textarea>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn btn-register" onclick="guardarRegistro()">1. Registrar Historial</button>
+        <button class="btn btn-whatsapp" onclick="enviarWhatsApp()">2. Notificar WhatsApp</button>
+    </div>
+
+    <div class="panel-control">
+        <label style="color: var(--primary); font-weight: bold; display: block; margin-bottom: 10px;">SEGUIMIENTO Y PARTES POR FECHA</label>
+        <div class="grid-inputs">
+            <div class="form-group"><label>Desde:</label><input type="date" id="fDesde" onchange="actualizarVista()"></div>
+            <div class="form-group"><label>Hasta:</label><input type="date" id="fHasta" onchange="actualizarVista()"></div>
+            <div class="form-group" style="grid-column: span 2;"><label>Búsqueda libre:</label><input type="text" id="txtBusqueda" placeholder="Buscar por palabra clave..." onkeyup="actualizarVista()"></div>
+        </div>
+        <div>
+            <button class="btn btn-small btn-pdf" onclick="exportarPDF()">GENERAR PARTE PDF</button>
+            <button class="btn btn-small btn-backup" onclick="exportarDatos()">RESPALDO (JSON)</button>
+        </div>
+    </div>
+
+    <table id="tablaNovedades">
+        <thead>
+            <tr>
+                <th width="150">Fecha / Hora Evento</th>
+                <th width="160">Zona</th>
+                <th>Detalle de Novedad y Acción</th>
+            </tr>
+        </thead>
+        <tbody id="listaNovedades"></tbody>
+    </table>
+</div>
+
+<script>
+    // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT (TERMINA EN /exec)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHlOv0XiKPAopxlp9BpXhDGjQRvryYjLFU9pbvAjkV5Ugc0irlNP5yFbEhpEUiYs702g/exec"; 
+
+    function inicializarFechaHora() {
+        const ahora = new Date();
+        document.getElementById('fechaNov').valueAsDate = ahora;
+        const horas = String(ahora.getHours()).padStart(2, '0');
+        const minutos = String(ahora.getMinutes()).padStart(2, '0');
+        document.getElementById('horaNov').value = `${horas}:${minutos}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        inicializarFechaHora();
+        actualizarVista();
+    });
+
+    async function guardarRegistro() {
+        const d = {
+            fechaE: document.getElementById('fechaNov').value,
+            horaE: document.getElementById('horaNov').value,
+            turno: document.getElementById('turno').value,
+            op: document.getElementById('operador').value,
+            zona: document.getElementById('zona').value,
+            nov: document.getElementById('novedad').value.trim(),
+            acc: document.getElementById('accion').value.trim(),
+            carga: new Date().toLocaleString()
+        };
+
+        if(!d.nov || !d.fechaE || !d.horaE) {
+            return alert("⚠️ La descripción, fecha y hora son obligatorias.");
+        }
+
+        // 1. Guardar en Historial Local
+        let db = JSON.parse(localStorage.getItem('db_central_timbues_v7')) || [];
+        db.unshift(d);
+        localStorage.setItem('db_central_timbues_v7', JSON.stringify(db));
+
+        // 2. Enviar a Google Sheets
+        try {
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(d)
+            });
+            alert("✅ Novedad registrada con éxito y enviada a la nube.");
+        } catch (error) {
+            console.error("Error al enviar a la nube:", error);
+            alert("✅ Registrado localmente, pero hubo un error de conexión con la nube.");
+        }
+
+        document.getElementById('novedad').value = "";
+        document.getElementById('accion').value = "";
+        inicializarFechaHora();
+        actualizarVista();
+    }
+
+    function enviarWhatsApp() {
+        const zona = document.getElementById('zona').value;
+        const nov = document.getElementById('novedad').value.trim();
+        const acc = document.getElementById('accion').value.trim();
+        const op = document.getElementById('operador').value;
+        const fechaE = document.getElementById('fechaNov').value;
+        const horaE = document.getElementById('horaNov').value;
+
+        if(!nov) return alert("⚠️ No hay texto para notificar.");
+
+        const msg = `*REPORTE TÉCNICO - ${zona}*%0A` +
+                    `*Fecha:* ${fechaE} | *Hora:* ${horaE}%0A` +
+                    `*Op:* ${op}%0A` +
+                    `--------------------------%0A` +
+                    `*NOV:* ${nov}%0A` +
+                    `*ACC:* ${acc}`;
+
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+    }
+
+    function actualizarVista() {
+        const db = JSON.parse(localStorage.getItem('db_central_timbues_v7')) || [];
+        const desde = document.getElementById('fDesde').value;
+        const hasta = document.getElementById('fHasta').value;
+        const query = document.getElementById('txtBusqueda').value.toLowerCase();
+        const tbody = document.getElementById('listaNovedades');
+        
+        tbody.innerHTML = "";
+        db.forEach(i => {
+            const matchFecha = (!desde || i.fechaE >= desde) && (!hasta || i.fechaE <= hasta);
+            const matchTxt = i.nov.toLowerCase().includes(query) || i.zona.toLowerCase().includes(query);
+
+            if(matchFecha && matchTxt) {
+                tbody.innerHTML += `<tr>
+                    <td>
+                        <strong>${i.fechaE}</strong><br>
+                        <strong>Hora: ${i.horaE}</strong><br>
+                        <small>${i.turno}</small>
+                        <span class="timestamp">Registro: ${i.carga}</span>
+                    </td>
+                    <td><span class="badge-zona">${i.zona}</span></td>
+                    <td>
+                        <strong>Nov:</strong> ${i.nov}<br>
+                        <strong style="color:var(--accent)">Acc:</strong> ${i.acc}<br>
+                        <small style="color:#666">Op: ${i.op}</small>
+                    </td>
+                </tr>`;
+            }
+        });
+    }
+
+    function exportarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const db = JSON.parse(localStorage.getItem('db_central_timbues_v7')) || [];
+        const desde = document.getElementById('fDesde').value;
+        const hasta = document.getElementById('fHasta').value;
+        
+        const filtrados = db.filter(i => (!desde || i.fechaE >= desde) && (!hasta || i.fechaE <= hasta));
+
+        doc.setFontSize(16);
+        doc.text("PARTE DE NOVEDADES - CENTRAL TIMBÚES", 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Rango: ${desde || 'Inicio'} a ${hasta || 'Fin'} | Generado: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        const rows = filtrados.map(i => [
+            `${i.fechaE}\n${i.horaE}`, 
+            i.turno, 
+            i.zona, 
+            `NOV: ${i.nov}\nACC: ${i.acc}\n(Op: ${i.op})`
+        ]);
+
+        doc.autoTable({
+            startY: 35,
+            head: [['Fecha/Hora', 'Turno', 'Zona', 'Novedad / Acción']],
+            body: rows,
+            headStyles: { fillColor: [26, 58, 90] },
+            styles: { fontSize: 8, overflow: 'linebreak' }
+        });
+
+        doc.save(`Parte_Timbues_${new Date().toLocaleDateString()}.pdf`);
+    }
+
+    function exportarDatos() {
+        const data = localStorage.getItem('db_central_timbues_v7');
+        if(!data) return alert("No hay datos.");
+        const blob = new Blob([data], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `backup_central_v7.json`;
+        a.click();
+    }
+</script>
+
+</body>
+</html>
